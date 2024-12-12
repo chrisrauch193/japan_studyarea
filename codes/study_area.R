@@ -15,6 +15,7 @@ library(tidyverse)
 library(rnaturalearth)
 library(ggplot2)
 library(mapview)
+library(dplyr)
 # Settings
 sf_use_s2(FALSE)
 
@@ -74,12 +75,12 @@ ggplot() +
 # For example, you might want to exclude certain EEZs or IHO regions.
 
 # Example: Remove some EEZs based on sovereign (you'll need to inspect the map and adjust)
-inter.iho <- inter.iho |>
-  filter(!sovereign1 %in% c("Some Country", "Another Country")) # Replace with actual country names
+# inter.iho <- inter.iho |>
+#   filter(!sovereign1 %in% c("Some Country", "Another Country")) # Replace with actual country names
 
 # Example: Remove specific IHO sea regions if needed
-inter.iho <- inter.iho |>
-  filter(!iho_sea %in% c("Some Sea Region", "Another Sea Region")) # Replace with actual sea region names
+# inter.iho <- inter.iho |>
+#   filter(!iho_sea %in% c("Some Sea Region", "Another Sea Region")) # Replace with actual sea region names
 
 # Refine study area by keeping only areas within bounding box
 study.area <- st_crop(inter.iho, st_bbox(bbox))
@@ -106,3 +107,34 @@ plot(starea.un)
 fs::dir_create("data/shapefiles")
 st_write(study.area, paste0("data/shapefiles/mpa_asia_starea_eez_v", version, ".shp"), delete_layer = TRUE)
 st_write(starea.un, paste0("data/shapefiles/mpa_asia_starea_v", version, ".shp"), delete_layer = TRUE)
+
+
+
+
+
+# Load occurrence data
+occurrence_data_list <- readRDS("~/seminar/japan_studyarea/data/occurrence/occurrence_data_list.rds")
+
+# Combine all occurrence data into one data frame (if it's a list)
+occurrence_data <- do.call(rbind, occurrence_data_list)
+
+# Convert to sf object (ensure CRS is WGS84)
+occurrence_sf <- st_as_sf(occurrence_data, coords = c("longitude", "latitude"), crs = 4326)
+
+# Create the plot with a global view
+ggplot() +
+  # World background
+  geom_sf(data = world, fill = "grey40", color = NA) +
+  # Study area
+  geom_sf(data = study.area, fill = "grey70", color = "orange") +
+  # Asia selection (if applicable)
+  geom_sf(data = asia.sel, fill = NA, color = "blue") +
+  # Occurrence points
+  geom_sf(data = occurrence_sf, color = "red", size = 1, alpha = 0.7) +
+  # Remove bounding box limits to show the whole world
+  coord_sf(expand = FALSE) +
+  theme_minimal() +
+  labs(
+    title = "Global Map with Study Area and Occurrence Points",
+    subtitle = "Overlay of occurrence points on study area across the world"
+  )
