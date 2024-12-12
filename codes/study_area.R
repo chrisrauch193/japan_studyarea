@@ -1,7 +1,9 @@
-### MPA EUROPE PROJECT - OBIS ###
+### MPA ASIA PROJECT - OBIS ###
 ### Define the study area for the project ###
 
-# April 2023 - s.principe@unesco.org #
+# Modified from MPA Europe code by s.principe@unesco.org
+# For Anemonefish and Anemone Host SDM/HSM and Larval Dispersal
+# May 2024 - [Your Name]
 
 # Load packages ----
 # Obtaining marine regions
@@ -17,83 +19,90 @@ library(mapview)
 sf_use_s2(FALSE)
 
 # Define version
-version <- 2
-
+version <- 1
 
 # Load shapefiles ----
 # Load IHO borders
-iho <- mr_shp(key = "MarineRegions:eez_iho_union_v2", maxFeatures = 1000)
+iho <- mr_shp(key = "MarineRegions:eez_iho", maxFeatures = 3000)
 
-# Load Europe shapefile
-europe <- ne_countries(scale = "large", continent = "europe")
-europe <- st_as_sf(europe)
+# Load Asia shapefile from Natural Earth
+asia <- ne_countries(scale = "large", continent = "asia")
+asia <- st_as_sf(asia)
 
-# Load world shapefile (for ploting)
+# Load world shapefile (for plotting)
 world <- ne_countries(scale = "large")
 world <- st_as_sf(world)
 
-
+# Define Bounding Box for Kuroshio Current Region
+# xmin: 110 (covers the eastern part of the South China Sea)
+# xmax: 160 (extends east to follow the Kuroshio Current path)
+# ymin: -5 (includes areas south of Taiwan, Philippines, potential for southward dispersal)
+# ymax: 50 (extends north along the Japanese coast, following the Kuroshio Current)
+bbox <- c(xmin = 110, xmax = 160, ymin = -5, ymax = 50)
 
 # Select relevant area ----
-# We start by removing areas out of the project scope from the shapefile
-europe.sel <- europe %>% 
-  filter(!str_detect("Russia", admin)) %>%
+# Filter Asia countries relevant to the study area (Japan, Taiwan, Philippines, etc.)
+# You might need to adjust this list based on your specific needs.
+asia.sel <- asia |>
+  filter(admin %in% c("Japan", "Taiwan", "Philippines", "Vietnam", "China", 
+                      "South Korea", "North Korea", "Indonesia", "Malaysia",
+                      "Brunei", "East Timor")) |>
   select(admin)
 
-# We crop for the relevant area
-europe.sel <- st_crop(europe.sel, c(xmin = -68.4, ymin = 20, xmax = 57, ymax = 80.7))
-
-plot(europe.sel)
+# Crop to the bounding box
+asia.sel <- st_crop(asia.sel, bbox)
 
 # Intersect with IHO borders
 # We add a small buffer to ensure all areas are covered
 inter <- st_intersects(iho,
-                       st_buffer(europe.sel, 0.3), sparse = F)
+                       st_buffer(asia.sel, 0.3), sparse = F)
 
 inter <- apply(inter, 1, any)
 
 inter.iho <- iho[inter,]
 
-# Plot to see
-ggplot()+
+# Plot to see initial intersection
+ggplot() +
   geom_sf(data = world, fill = "grey40", color = NA) +
   geom_sf(data = inter.iho, fill = "grey70", color = "orange") +
-  geom_sf(data = europe.sel, fill = NA, color = "blue") +
-  coord_sf(st_bbox(inter.iho)[c(1,3)], st_bbox(inter.iho)[c(2,4)])
+  geom_sf(data = asia.sel, fill = NA, color = "blue") +
+  coord_sf(xlim = bbox[c(1, 2)], ylim = bbox[c(3, 4)])
 
-# We manually add/remove some areas to reach the final study area
-inter.iho <- inter.iho %>%
-  filter(sovereign != "Russia")
+# Manual adjustments: Remove areas outside the desired scope
+# This is where you can be creative and tailor the selection based on your knowledge of 
+# anemonefish/host distribution and the Kuroshio Current.
+# For example, you might want to exclude certain EEZs or IHO regions.
 
-join.iho <- iho %>%
-  filter(sovereign == "France" |
-           str_detect(iho_sea, "Mediterranean|Black Sea|Baltic Sea|Sea of Marmara|Gulf of Finland")) %>%
-  st_crop(st_bbox(europe.sel)+c(0,0,10,0))
+# Example: Remove some EEZs based on sovereign (you'll need to inspect the map and adjust)
+inter.iho <- inter.iho |>
+  filter(!sovereign1 %in% c("Some Country", "Another Country")) # Replace with actual country names
 
-study.area <- bind_rows(inter.iho, join.iho)
+# Example: Remove specific IHO sea regions if needed
+inter.iho <- inter.iho |>
+  filter(!iho_sea %in% c("Some Sea Region", "Another Sea Region")) # Replace with actual sea region names
 
-study.area <- study.area %>%
-  filter(iho_sea != "Sea of Azov")
+# Refine study area by keeping only areas within bounding box
+study.area <- st_crop(inter.iho, st_bbox(bbox))
 
-study.area <- study.area[!duplicated(study.area$objectid_1),]
-
-# Plot to see
-ggplot()+
+# Plot to see the refined study area
+ggplot() +
   geom_sf(data = world, fill = "grey40", color = NA) +
   geom_sf(data = study.area, fill = "grey70", color = "orange") +
-  geom_sf(data = europe.sel, fill = NA, color = "blue") +
-  coord_sf(st_bbox(study.area)[c(1,3)], st_bbox(study.area)[c(2,4)])
+  geom_sf(data = asia.sel, fill = NA, color = "blue") +
+  coord_sf(xlim = bbox[c(1, 2)], ylim = bbox[c(3, 4)])
 
-mapView(study.area)
+mapview(study.area)
 
 # Unify in a single polygon and save ----
 starea.un <- st_union(study.area)
 
+# Further Smoothing (Optional)
+starea.un <- st_buffer(starea.un, dist = 0.02)
+starea.un <- st_buffer(starea.un, dist = -0.02)
+
 plot(starea.un)
-
-
 
 # Save shapefile ----
 fs::dir_create("data/shapefiles")
-st_write(study.area, paste0("data/shapefiles/mpa_europe_starea_eez_v", version, ".shp"))
-st_write(starea.un, paste0("data/shapefiles/mpa_europe_starea_v", version, ".shp"))
+st_write(study.area, paste0("data/shapefiles/mpa_asia_starea_eez_v", version, ".shp"), delete_layer = TRUE)
+st_write(starea.un, paste0("data/shapefiles/mpa_asia_starea_v", version, ".shp"), delete_layer = TRUE)
