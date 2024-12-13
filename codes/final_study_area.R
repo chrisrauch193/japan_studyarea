@@ -23,7 +23,7 @@ version <- 1
 
 # Load shapefiles ----
 # Load IHO borders
-iho <- mr_shp(key = "MarineRegions:eez_iho", maxFeatures = 3000)
+iho <- mr_shp(key = "MarineRegions:eez_iho", maxFeatures = 1000)
 
 # Load Asia shapefile from Natural Earth
 asia <- ne_countries(scale = "large", continent = "asia")
@@ -67,12 +67,12 @@ south_korea_eez <- mr_shp(key = "MarineRegions:eez", filter = 8327)
 # Combine South Korea EEZ with the intersected IHO regions
 inter.iho <- rbind(inter.iho, south_korea_eez)
 
-# Plot to see initial intersection
-ggplot() +
-  geom_sf(data = world, fill = "grey40", color = NA) +
-  geom_sf(data = inter.iho, fill = "grey70", color = "orange") +
-  geom_sf(data = asia.sel, fill = NA, color = "blue") +
-  coord_sf(xlim = bbox[c(1, 2)], ylim = bbox[c(3, 4)])
+# # Plot to see initial intersection
+# ggplot() +
+#   geom_sf(data = world, fill = "grey40", color = NA) +
+#   geom_sf(data = inter.iho, fill = "grey70", color = "orange") +
+#   geom_sf(data = asia.sel, fill = NA, color = "blue") +
+#   coord_sf(xlim = bbox[c(1, 2)], ylim = bbox[c(3, 4)])
 
 # Manual adjustments: Remove areas outside the desired scope
 # This is where you can be creative and tailor the selection based on your knowledge of 
@@ -90,12 +90,12 @@ ggplot() +
 # Refine study area by keeping only areas within bounding box
 study.area <- st_crop(inter.iho, st_bbox(bbox))
 
-# Plot to see the refined study area
-ggplot() +
-  geom_sf(data = world, fill = "grey40", color = NA) +
-  geom_sf(data = study.area, fill = "grey70", color = "orange") +
-  geom_sf(data = asia.sel, fill = NA, color = "blue") +
-  coord_sf(xlim = bbox[c(1, 2)], ylim = bbox[c(3, 4)])
+# # Plot to see the refined study area
+# ggplot() +
+#   geom_sf(data = world, fill = "grey40", color = NA) +
+#   geom_sf(data = study.area, fill = "grey70", color = "orange") +
+#   geom_sf(data = asia.sel, fill = NA, color = "blue") +
+#   coord_sf(xlim = bbox[c(1, 2)], ylim = bbox[c(3, 4)])
 
 mapview(study.area)
 
@@ -119,7 +119,7 @@ st_write(starea.un, paste0("data/shapefiles/mpa_asia_starea_v", version, ".shp")
 # 1. Map of Asia with selected countries highlighted
 plot_asia_countries <- ggplot() +
   geom_sf(data = world, fill = "grey60", color = "grey80") + # Show the whole world in the background
-  geom_sf(data = asia.sel, fill = "coral", color = "grey80") + # Highlight selected countries
+  geom_sf(data = asia.sel, fill = "deepskyblue", color = "grey80") + # Highlight selected countries
   coord_sf(xlim = bbox[c(1, 2)], ylim = bbox[c(3, 4)]) +
   labs(title = "A) Relevant Asian Countries for the Study")
 
@@ -128,7 +128,7 @@ ggsave(paste0("data/shapefiles/plot_asia_countries_v", version, ".png"), plot_as
 # 2. Map of the IHO/EEZ intersection grid within the bounding box
 plot_iho_eez <- ggplot() +
   geom_sf(data = world, fill = "grey60", color = "grey80") +
-  geom_sf(data = inter.iho, fill = NA, color = "coral") +
+  geom_sf(data = inter.iho, fill = NA, color = "deepskyblue") +
   coord_sf(xlim = bbox[c(1, 2)], ylim = bbox[c(3, 4)]) +
   labs(title = "B) IHO/EEZ Intersection Grid within Bounding Box")
 
@@ -137,7 +137,7 @@ ggsave(paste0("data/shapefiles/plot_iho_eez_v", version, ".png"), plot_iho_eez, 
 # 3. Final study area map
 plot_final_study_area <- ggplot() +
   geom_sf(data = world, fill = "grey60", color = "grey80") + # Show the whole world in the background
-  geom_sf(data = study.area, fill = "coral", color = "coral") +
+  geom_sf(data = study.area, fill = "deepskyblue", color = "deepskyblue") +
   geom_sf(data = asia.sel, fill = NA, color = "grey80") + # Highlight selected countries
   coord_sf(xlim = bbox[c(1, 2)], ylim = bbox[c(3, 4)]) +
   labs(title = "C) Final Study Area for Anemonefish and Anemone Host Analysis")
